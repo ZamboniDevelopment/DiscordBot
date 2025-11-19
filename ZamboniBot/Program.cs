@@ -17,8 +17,8 @@ internal class Program
         Client = new DiscordWebhookClient(BotConfig.WebhookUrl);
         await using var timer = new Timer(_ =>
         {
-            var a = UpdateDiscordMessage(8080, 1430591387153207388);
-            var b = UpdateDiscordMessage(8081, 1440511306338668585);
+            var a = UpdateDiscordMessage(8080, "nhl10",1430591387153207388);
+            var b = UpdateDiscordMessage(8081, "nhl11",1440511306338668585);
         }, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
 
         await Task.Delay(Timeout.Infinite);
@@ -46,10 +46,10 @@ internal class Program
         BotConfig = deserializer.Deserialize<BotConfig>(yamlText);
     }
 
-    private static async Task UpdateDiscordMessage(int statusPort, ulong messageId)
+    private static async Task UpdateDiscordMessage(int statusPort, string game, ulong messageId)
     {
         var serverStatus = new ServerStatus();
-        await serverStatus.GetStatus(statusPort);
+        await serverStatus.GetStatus(statusPort, game);
         var embedBuilder = new EmbedBuilder()
             .WithColor(Color.Green)
             .WithFields(new List<EmbedFieldBuilder>
