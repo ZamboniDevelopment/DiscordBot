@@ -7,29 +7,44 @@ namespace ZamboniBot;
 
 internal class Program
 {
-    private static BotConfig BotConfig;
-
-    private static DiscordWebhookClient Client;
+    private static BotConfig BotConfig = null!;
+    private static DiscordWebhookClient Client = null!;
+    private static readonly HttpClient Http = new HttpClient();
 
     private static async Task Main(string[] args)
     {
         InitConfig();
         Client = new DiscordWebhookClient(BotConfig.WebhookUrl);
-        await using var timer = new Timer(_ =>
-        {
-            var a = UpdateDiscordMessage(8080, "nhl10",1430591387153207388);
-            var b = UpdateDiscordMessage(8081, "nhl11",1440511306338668585);
-        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(10));
-
+        _ = Task.Run(UpdateLoop);
         await Task.Delay(Timeout.Infinite);
+    }
+
+    private static async Task UpdateLoop()
+    {
+        while (true)
+        {
+            try
+            {
+                await UpdateDiscordMessage(8080, "nhl10", 1430591387153207388);
+                await UpdateDiscordMessage(8081, "nhl11", 1440511306338668585);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Loop error: " + ex.Message);
+            }
+
+            await Task.Delay(TimeSpan.FromSeconds(10));
+        }
     }
 
     private static void InitConfig()
     {
         const string configFile = "bot-config.yml";
+
         var deserializer = new DeserializerBuilder()
             .WithNamingConvention(PascalCaseNamingConvention.Instance)
             .Build();
+
         var serializer = new SerializerBuilder()
             .WithNamingConvention(PascalCaseNamingConvention.Instance)
             .Build();
@@ -37,36 +52,42 @@ internal class Program
         if (!File.Exists(configFile))
         {
             BotConfig = new BotConfig();
-            var yaml = serializer.Serialize(BotConfig);
-            File.WriteAllText(configFile, yaml);
+            File.WriteAllText(configFile, serializer.Serialize(BotConfig));
             return;
         }
 
-        var yamlText = File.ReadAllText(configFile);
-        BotConfig = deserializer.Deserialize<BotConfig>(yamlText);
+        BotConfig = deserializer.Deserialize<BotConfig>(File.ReadAllText(configFile));
     }
 
     private static async Task UpdateDiscordMessage(int statusPort, string game, ulong messageId)
     {
-        var serverStatus = new ServerStatus();
-        await serverStatus.GetStatus(statusPort, game);
-        var embedBuilder = new EmbedBuilder()
-            .WithColor(Color.Green)
-            .WithFields(new List<EmbedFieldBuilder>
-            {
-                new() { Name = "Server Version", Value = string.IsNullOrWhiteSpace(serverStatus.ServerVersion) ? "N/A" : serverStatus.ServerVersion, IsInline = true },
-                new() { Name = "Online Users Count", Value = serverStatus.OnlineUsersCount.ToString(), IsInline = true },
-                new() { Name = "Online Users Names", Value = string.IsNullOrWhiteSpace(serverStatus.OnlineUsers) ? "None" : serverStatus.OnlineUsers, IsInline = true },
-                new() { Name = "Queue Count", Value = serverStatus.QueuedUsers.ToString(), IsInline = true },
-                new() { Name = "Active Games", Value = serverStatus.ActiveGames.ToString(), IsInline = true }
-            });
+        var status = await ServerStatus.GetStatus(Http, statusPort, game);
 
-        var embed = embedBuilder.Build();
+        var embed = new EmbedBuilder()
+            .WithColor(Color.Green)
+            .AddField("Server Version", status.ServerVersion ?? "N/A", true)
+            .AddField("Online Users Count", status.OnlineUsersCount.ToString(), true)
+            .AddField("Online Users Names", FormatUserList(status.OnlineUsers), true)
+            .AddField("Queue Count", status.QueuedUsers.ToString(), true)
+            .AddField("Active Games", status.ActiveGames.ToString(), true)
+            .Build();
 
         await Client.ModifyMessageAsync(messageId, props =>
         {
             props.Content = "";
-            props.Embeds = new List<Embed> { embed };
+            props.Embeds = new[] { embed };
         });
+    }
+
+    private static string FormatUserList(string? users, int max = 40)
+    {
+        if (string.IsNullOrWhiteSpace(users))
+            return "None";
+        var split = users.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        if (split.Length <= max)
+            return string.Join(", ", split);
+        var shown = split.Take(max);
+        var remaining = split.Length - max;
+        return $"{string.Join(", ", shown)} and {remaining} more";
     }
 }
