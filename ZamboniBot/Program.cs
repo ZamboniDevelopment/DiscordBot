@@ -27,8 +27,11 @@ internal class Program
             {
                 await UpdateDiscordMessage(8080, "nhl10", 1430591387153207388);
                 await UpdateDiscordMessage(8081, "nhl11", 1440511306338668585);
-                await UpdateDiscordMessage(8082, "nhl14", 1454739955619463229);
-                await UpdateDiscordMessage(8083, "nhllegacy", 1454739965312372757);
+                await UpdateDiscordMessage(8082, "nhl14", 1495916489721778217);
+                await UpdateDiscordMessage(8083, "nhllegacy", 1495916751815180298);
+                await UpdateDiscordMessage(8085, "nhl12", 1454739955619463229);
+                await UpdateDiscordMessage(8086, "nhl13", 1454739965312372757);
+                await UpdateDiscordMessage(8087, "nhl15", 1495916644013314089);
             }
             catch (Exception ex)
             {
