@@ -10,6 +10,17 @@ public class ServerStatus
     [JsonPropertyName("onlineUsers")] public string? OnlineUsers { get; set; }
     [JsonPropertyName("queuedUsers")] public int QueuedUsers { get; set; }
     [JsonPropertyName("activeGames")] public int ActiveGames { get; set; }
+    
+    public override bool Equals(object? obj) =>
+        obj is ServerStatus o &&
+        ServerVersion    == o.ServerVersion    &&
+        OnlineUsersCount == o.OnlineUsersCount &&
+        OnlineUsers      == o.OnlineUsers      &&
+        QueuedUsers      == o.QueuedUsers      &&
+        ActiveGames      == o.ActiveGames;
+ 
+    public override int GetHashCode() =>
+        HashCode.Combine(ServerVersion, OnlineUsersCount, OnlineUsers, QueuedUsers, ActiveGames);
 
     public static async Task<ServerStatus> GetStatus(HttpClient client, int port, string game)
     {
