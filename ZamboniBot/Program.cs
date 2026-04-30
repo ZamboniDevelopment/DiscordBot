@@ -10,6 +10,7 @@ internal class Program
     private static BotConfig BotConfig = null!;
     private static DiscordWebhookClient Client = null!;
     private static readonly HttpClient Http = new HttpClient();
+    private static readonly Dictionary<ulong, ServerStatus> LastStatus = new();
 
     private static async Task Main(string[] args)
     {
@@ -67,6 +68,10 @@ internal class Program
     private static async Task UpdateDiscordMessage(int statusPort, string game, ulong messageId)
     {
         var status = await ServerStatus.GetStatus(Http, statusPort, game);
+        
+        if (LastStatus.TryGetValue(messageId, out var prev) && prev.Equals(status))
+            return;
+        LastStatus[messageId] = status;
 
         var embed = new EmbedBuilder()
             .WithColor(Color.Green)
@@ -84,6 +89,7 @@ internal class Program
         });
     }
     
+    // remove this?
     private static void EmptyMsg()
     {
         Client.SendMessageAsync("emptymessage");
